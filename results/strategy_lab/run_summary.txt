@@ -1,0 +1,21 @@
+BTC ONE-DAY VOL FORECAST STRATEGY LAB
+
+Sample: 2025-02-16 to 2026-09-01
+Observations: 562
+Main transaction cost: 10 bp per unit turnover
+One-day model forecast: 50% HARQ variance + 50% Realized-GARCH variance
+
+Key result:
+TREND_X_VOL_Z has the highest Sharpe (0.787) versus TREND (0.773),
+but annual turnover rises from 21.43x to 35.65x and drawdown is slightly worse.
+
+EWMA_VOL_TARGET Sharpe: -0.059
+MODEL_VOL_TARGET Sharpe: -0.156
+
+TREND_EWMA Sharpe: 0.764
+TREND_MODEL_VOL Sharpe: 0.688
+
+Conclusion:
+Better realized-volatility forecasts did not translate into convincing
+incremental spot-BTC trading alpha in this sample. The project is frozen
+rather than further tuned on the same OOS period.
