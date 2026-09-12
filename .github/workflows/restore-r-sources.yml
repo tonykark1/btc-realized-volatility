@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - 'source_bundle/part07.b64'
+      - 'source_bundle/trigger.txt'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -15,14 +17,41 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Reassemble source bundle
+      - name: Install tolerant archive tools
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq p7zip-full zip
+
+      - name: Reassemble and recover source bundle
         shell: bash
         run: |
           set -euo pipefail
           cat source_bundle/part*.b64 | base64 --decode > /tmp/project_source.zip
+          rm -rf /tmp/project_source
           mkdir -p /tmp/project_source R
-          unzip -o /tmp/project_source.zip -d /tmp/project_source
-          cp /tmp/project_source/*.R R/
+
+          # 7-Zip is more tolerant than unzip when a transferred ZIP contains
+          # harmless inserted bytes. If it cannot recover every member, repair
+          # the central directory with zip -FF and retry.
+          set +e
+          7z x -y /tmp/project_source.zip -o/tmp/project_source
+          seven_status=$?
+          set -e
+
+          count=$(find /tmp/project_source -maxdepth 2 -type f -name '*.R' | wc -l)
+          if [ "$count" -lt 7 ]; then
+            echo "7-Zip recovered $count R files; attempting ZIP repair..."
+            rm -rf /tmp/project_source/*
+            printf 'y\n' | zip -FF /tmp/project_source.zip --out /tmp/project_source_repaired.zip || true
+            7z x -y /tmp/project_source_repaired.zip -o/tmp/project_source || true
+          fi
+
+          count=$(find /tmp/project_source -maxdepth 2 -type f -name '*.R' | wc -l)
+          echo "Recovered R files: $count"
+          find /tmp/project_source -maxdepth 2 -type f -name '*.R' -print
+          test "$count" -ge 7
+          find /tmp/project_source -maxdepth 2 -type f -name '*.R' -exec cp {} R/ \;
 
       - name: Commit restored R scripts
         shell: bash
