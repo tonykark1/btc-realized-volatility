@@ -1,0 +1,17 @@
+# Raw / cached market data
+cache/
+data/raw/
+
+# Local R state
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+
+# Generated temporary files
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Optional local visualization renders
+results/btc_rv_horserace/viz/
