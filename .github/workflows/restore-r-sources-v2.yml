@@ -1,0 +1,67 @@
+name: Restore verified R sources
+
+on:
+  push:
+    paths:
+      - 'source_upload_v2/trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Reassemble and verify source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat source_upload_v2/part*.b64 | base64 --decode > /tmp/btc-realized-variance.zip
+          echo "17dc047932b491bae65af701d024bb62393e22667d19ed43ce74b09781d32c64  /tmp/btc-realized-variance.zip" | sha256sum -c -
+          unzip -t /tmp/btc-realized-variance.zip
+          rm -rf /tmp/btc-rv-src
+          mkdir -p /tmp/btc-rv-src R
+          unzip -q /tmp/btc-realized-variance.zip -d /tmp/btc-rv-src
+
+          count=$(find /tmp/btc-rv-src -maxdepth 1 -type f -name '*.R' | wc -l)
+          echo "R source files in verified archive: $count"
+          test "$count" -eq 5
+
+          expected=(
+            btc_standard_vol_targeting.R
+            btc_binance_realized_vol_horserace.R
+            btc_ceemdan_binance_5m_backtest.R
+            btc_ceemdan_binance_controls_v2.R
+            btc_rv_horserace_visuals.R
+          )
+          for f in "${expected[@]}"; do
+            test -s "/tmp/btc-rv-src/$f"
+          done
+
+          rm -rf R
+          mkdir R
+          cp /tmp/btc-rv-src/*.R R/
+          ls -lh R/
+
+      - name: Commit verified sources and remove obsolete bundles
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add R/
+          git rm -rf source_upload_v2 || true
+          git rm -rf source_bundle || true
+          git rm -f .github/workflows/restore-r-sources.yml || true
+
+          if git diff --cached --quiet; then
+            echo "No source changes to commit."
+          else
+            git commit -m "Restore verified R research sources"
+            git push
+          fi
