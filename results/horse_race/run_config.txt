@@ -1,0 +1,28 @@
+Run time: 2026-09-11 15:33:23.126828
+QUICK_RUN: FALSE
+Data: Binance Spot BTCUSDT 5m
+Sample: 2019-01-01 to 2026-09-10
+OOS origins: 608
+Train window: 1460
+Horizons: 1,5,10
+HAR range guard: TRUE
+Bootstrap B: 2000
+
+Realized measures:
+RV = sum 5m returns^2
+BV = (pi/2) sum |r_i||r_i-1|
+J = max(RV-BV,0)
+RQ = (M/3) sum r_i^4
+
+Primary comparisons:
+HARQ vs HAR_RV
+HARQ_F vs HAR_RV
+HAR_J vs HAR_RV
+REALGARCH vs GARCH_11
+REALGARCH vs HAR_RV
+HEAVY_RM vs GARCH_11
+HEAVY_RM vs HAR_RV
+
+Interpretation:
+mean_loss_diff_A_minus_B < 0 means model A is better.
+For QLIKE, lower is better.
