@@ -6,7 +6,7 @@ Research-grade Bitcoin realized-volatility forecasting using Binance 5-minute da
 
 This project started as a test of whether CEEMDAN decomposition adds useful information to Bitcoin volatility forecasts. After leakage-safe controls showed that the CEEMDAN signal was not robust, the project moved to models designed specifically for high-frequency realized volatility.
 
-The final workflow:
+The workflow:
 
 1. downloads/caches Binance Spot `BTCUSDT` 5-minute candles;
 2. constructs daily realized variance, bipower variation, jumps, realized quarticity, and semivariances;
@@ -54,8 +54,6 @@ In the first 20% target-vol ensemble run, realized strategy volatility was about
 
 ```text
 R/
-  btc_ceemdan_volatility_backtest.R
-  btc_ceemdan_incremental_ridge_backtest.R
   btc_ceemdan_binance_5m_backtest.R
   btc_ceemdan_binance_controls_v2.R
   btc_binance_realized_vol_horserace.R
@@ -68,12 +66,13 @@ docs/
 
 results/
   horse_race/                  # key browseable full-run outputs
-  archives/                    # full result ZIPs, including plots and large CSVs
 ```
 
-Raw Binance cache files are intentionally excluded from Git. The scripts rebuild them automatically.
+Raw Binance cache files and large generated datasets are intentionally excluded from Git. The research scripts rebuild the required market-data cache and generated outputs locally.
 
 ## Recommended execution order
+
+For the main realized-volatility analysis:
 
 ```r
 source("R/btc_binance_realized_vol_horserace.R")
@@ -81,7 +80,12 @@ source("R/btc_rv_horserace_visuals.R")
 source("R/btc_standard_vol_targeting.R")
 ```
 
-The CEEMDAN scripts are included for reproducibility of the research path and negative result.
+The two CEEMDAN scripts are included for reproducibility of the research path and negative result:
+
+```r
+source("R/btc_ceemdan_binance_5m_backtest.R")
+source("R/btc_ceemdan_binance_controls_v2.R")
+```
 
 ## Data and units
 
@@ -102,6 +106,7 @@ The full horse-race run uses a 1,460-day rolling training window, 608 out-of-sam
 - Direct multi-day HAR-family targets are purged so training targets end no later than the forecast origin.
 - The raw Binance data cache lives under `cache/` and is ignored by Git.
 - The visualization script uses a color-blind-safer palette and visually separates model identity from statistical direction.
+- The five active R source files in `R/` were restored from the verified project archive and committed directly to the repository.
 
 ## Disclaimer
 
