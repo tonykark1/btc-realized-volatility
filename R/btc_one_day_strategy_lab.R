@@ -241,15 +241,15 @@ if(!is.null(rv)) {
   px$rv_actual <- 10000*px$btc_log_return^2
 }
 
-# EWMA RV benchmark: at t, forecast t+1 from information through t.
+# EWMA RV benchmark: at origin t, forecast t+1 using information through t.
 ew <- rep(NA_real_,nrow(px))
 first <- which(is.finite(px$rv_actual))
 if(length(first)<60) stop("Too little realized RV history.")
 j0 <- first[60]
 ew[j0] <- mean(px$rv_actual[first[1:60]],na.rm=TRUE)
 if(j0<nrow(px)) for(i in (j0+1L):nrow(px)) {
-  if(is.finite(px$rv_actual[i-1]) && is.finite(ew[i-1])) {
-    ew[i] <- cfg$ewma_lambda*ew[i-1] + (1-cfg$ewma_lambda)*px$rv_actual[i-1]
+  if(is.finite(px$rv_actual[i]) && is.finite(ew[i-1])) {
+    ew[i] <- cfg$ewma_lambda*ew[i-1] + (1-cfg$ewma_lambda)*px$rv_actual[i]
   } else ew[i] <- ew[i-1]
 }
 px$ewma_rv <- ew
