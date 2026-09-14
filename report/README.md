@@ -5,8 +5,6 @@ This folder contains the nine-page public note for the finished BTC realized-vol
 ## Read or share
 
 - [PDF report](btc_realized_volatility_report.pdf)
-- [Self-contained HTML](btc_realized_volatility_report.html)
-- [Editable Quarto source](btc_realized_volatility_report.qmd)
 - [LinkedIn post](linkedin_post.md) and [eight-slide carousel text](linkedin_carousel.md)
 - [Methodological references](references.md)
 
@@ -14,7 +12,7 @@ This folder contains the nine-page public note for the finished BTC realized-vol
 
 `source_data/` contains the compact evidence used in the public note: forecast metrics, original pairwise DM/bootstrap output, corrected strategy metrics, the full cost grid, EWMA timing diagnostics, daily-close inputs and cumulative-loss evidence. `research_code/` snapshots the forecasting and corrected strategy scripts, and `tests/test_ewma_timing.R` guards the timing fix.
 
-The heavier per-origin forecast panel and full daily strategy path are retained in the archived local audit bundle rather than duplicated in this portfolio repository. Raw five-minute Binance cache files are also intentionally excluded.
+The heavier per-origin forecast panel, full daily strategy path, editable report source and self-contained HTML remain in the archived local audit bundle rather than being duplicated in this portfolio repository. Raw five-minute Binance cache files are also intentionally excluded.
 
 ## Correction and scope
 
