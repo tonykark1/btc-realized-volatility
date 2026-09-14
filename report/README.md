@@ -1,26 +1,25 @@
-# Report bundle
+# Public research-note bundle
 
-This folder contains the public research note for the finished BTC realized-volatility project.
+This folder contains the nine-page public note for the finished BTC realized-volatility project. The forecasting experiment is frozen; the strategy section incorporates the corrected EWMA timing audit.
 
-## Main files
+## Read or share
 
-- `btc_realized_volatility_report.pdf` — 8-page public research note.
-- `btc_realized_volatility_report.html` — browser version; keep the `figures/` folder beside it.
-- `btc_realized_volatility_report.qmd` — static report source. It does not rerun or refit the research models.
-- `linkedin_post.md` — concise post copy.
-- `linkedin_carousel.md` — text for an 8-slide carousel.
-- `source_data/` — compact saved evidence used to audit the published tables and figures. Large generated panels and raw market data are intentionally not committed.
-- `source_manifest.json` — SHA-256 manifest and provenance.
-- `validation.md` / `validate_report.py` — consistency checks.
+- [PDF report](btc_realized_volatility_report.pdf)
+- [Self-contained HTML](btc_realized_volatility_report.html)
+- [Editable Quarto source](btc_realized_volatility_report.qmd)
+- [LinkedIn post](linkedin_post.md) and [eight-slide carousel text](linkedin_carousel.md)
+- [Methodological references](references.md)
 
-## Research snapshot
+## Audit trail in GitHub
 
-The report is tied to repository research snapshot `e3fe98639e63a58883b8376e58d1e26c8b07e34e`. The later report commit only adds these publication artifacts.
+`source_data/` contains the compact evidence used in the public note: forecast metrics, original pairwise DM/bootstrap output, corrected strategy metrics, the full cost grid, EWMA timing diagnostics, daily-close inputs and cumulative-loss evidence. `research_code/` snapshots the forecasting and corrected strategy scripts, and `tests/test_ewma_timing.R` guards the timing fix.
 
-## Correction recorded
+The heavier per-origin forecast panel and full daily strategy path are retained in the archived local audit bundle rather than duplicated in this portfolio repository. Raw five-minute Binance cache files are also intentionally excluded.
 
-The strategy-lab EWMA benchmark was corrected so that the `t+1` forecast formed at origin `t` incorporates observed `RV_t`. No strategy parameter was retuned after the correction. The corrected values appear in the report and `source_data/strategy_metrics_*.csv`.
+## Correction and scope
 
-## Scope
+The EWMA benchmark now uses observed `RV_t` when forming the forecast for `t+1`. No strategy parameter was retuned after the correction. At 10 bp per unit turnover, corrected Sharpe ratios include `-0.03696` for EWMA vol targeting and `0.74889` for trend + EWMA; the model-vol-z overlay's small apparent edge over plain trend reverses by 25 bp costs.
 
-Forecast results are walk-forward OOS errors, not an untouched preregistered holdout after the complete research process. Pairwise DM/bootstrap tests are reported as pairwise, loss-specific inference; no global model-selection claim is made. The trading exercise is an economic application on the same repeatedly examined period, not a confirmatory alpha test.
+Forecast results are rolling walk-forward OOS errors, not an untouched preregistered holdout. Pairwise DM/bootstrap tests are nominal, pairwise and loss-specific. Realized-GARCH has the lowest raw QLIKE; the note does not claim statistical dominance over HARQ. The economic application reuses the same repeatedly examined market episode and is not a confirmatory alpha test.
+
+The original forecasting run did not capture a dependency lockfile. `sessionInfo.txt` records the corrected strategy verification environment only; no retrospective forecasting environment is fabricated.
