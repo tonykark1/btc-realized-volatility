@@ -1,37 +1,6 @@
-# ==============================================================================
 # BTC REALIZED-VOLATILITY MODEL HORSE RACE — BINANCE 5m
-# HAR / HAR-J / HARQ / HARQ-F / Realized-GARCH / HEAVY-RM / GARCH
-# ==============================================================================
-#
 # PURPOSE
-# -------
-# CEEMDAN did not show robust incremental value once tested against proper
-# controls. This script moves to models designed specifically for realized
-# volatility and high-frequency data.
-#
-# DATA:
-#   Binance Spot BTCUSDT 5-minute candles, UTC.
-#
-# REALIZED MEASURES:
-#
-#   RV_t = sum_i r_{t,i}^2
-#
-#   BV_t = (pi/2) sum_i |r_{t,i}| |r_{t,i-1}|
-#
-#   J_t  = max(RV_t - BV_t, 0)
-#
-#   RQ_t = (M_t/3) sum_i r_{t,i}^4
-#
-#   RS+_t = sum_i r_{t,i}^2 I(r_{t,i}>0)
-#   RS-_t = sum_i r_{t,i}^2 I(r_{t,i}<0)
-#
-# FORECAST TARGET:
-#
 #   y_{t,h} = mean(RV_{t+1}, ..., RV_{t+h})
-#
-# for h = 1, 5, 10 days.
-#
-# MODELS:
 #   1. GARCH_11
 #   2. HAR_RV
 #   3. HAR_J
@@ -39,55 +8,16 @@
 #   5. HARQ_F
 #   6. REALGARCH
 #   7. HEAVY_RM
-#
-# HARQ:
-#
-#   y = b0 + b1 RV_d + b1Q sqrt(RQ_d)*RV_d
-#            + b2 RV_w + b3 RV_m + e
-#
-# HARQ-F additionally allows weekly/monthly HAR coefficients to vary with
-# corresponding realized-quarticity states.
-#
-# HAR-J in this script uses continuous/jump decomposition:
-#
-#   y = b0 + C_d + C_w + C_m + J_d + J_w + J_m + e
-#
-# where C is bipower variation and J=max(RV-BV,0).
-#
-# REALIZED-GARCH:
-#   Uses rugarch::realGARCH with daily returns + sqrt(RV) as the realized
-#   volatility input. We evaluate rugarch's realized-measure forecast after
 #   squaring it back to variance units.
-#
-# HEAVY_RM:
-#   We estimate the realized-measure equation
-#
-#       m_t = omega + alpha * RV_{t-1} + beta * m_{t-1}
-#
-#   by QLIKE/QMLE with variance targeting. This directly forecasts expected
-#   realized variance and is the relevant HEAVY component for this horse race.
-#
 # ANTI-LEAKAGE:
-#   Every forecast origin t is estimated using data available only through t.
-#   Direct HAR/HARQ targets inside training end no later than t.
-#
-# IMPORTANT:
-#   QUICK_RUN=TRUE keeps only the most recent 180 OOS origins.
-#   Once the pipeline works, set QUICK_RUN=FALSE for the research run.
-#
-# ==============================================================================
 
-
-# ==============================================================================
 # 0. CONFIG
-# ==============================================================================
 
 QUICK_RUN <- FALSE
 
 cfg <- list(
   seed = 12345L,
 
-  # Binance
   symbol = "BTCUSDT",
   interval = "5m",
   start_date = as.Date("2019-01-01"),
@@ -98,45 +28,34 @@ cfg <- list(
   max_retries = 6L,
   retry_base_seconds = 1,
 
-  # Reuses the raw cache created by the previous Binance scripts.
   raw_cache = "cache/binance_raw/BTCUSDT_5m.rds",
   refresh_cache = FALSE,
 
-  # Daily-quality rules
   expected_bars_per_day = 288L,
   min_bars_per_day = 285L,
   drop_incomplete_days = TRUE,
 
-  # Forecast experiment
   horizons = c(1L, 5L, 10L),
   test_start = as.Date("2025-01-01"),
   max_oos_origins = if (QUICK_RUN) 180L else NA_integer_,
   train_window = if (QUICK_RUN) 730L else 1460L,
 
-  # HAR
   week = 5L,
   month = 22L,
   min_har_rows = 120L,
 
-  # Literature-style stability rule for linear HAR-family models:
-  # if an OOS forecast is outside the training target range, replace it with
-  # the training mean. This prevents a single negative/absurd OLS forecast from
-  # mechanically destroying QLIKE.
   har_range_guard = TRUE,
 
   # HEAVY
   heavy_min_rows = 250L,
   heavy_rho_max = 0.999,
 
-  # Numerical
   rv_floor = 1e-10,
   forecast_floor = 1e-10,
 
-  # Inference
   bootstrap_B = if (QUICK_RUN) 500L else 2000L,
   bootstrap_block_length = 14L,
 
-  # Outputs/caches
   model_cache_dir = "cache/btc_rv_horserace_models",
   output_dir = "results/btc_rv_horserace"
 )
@@ -147,10 +66,7 @@ dir.create(dirname(cfg$raw_cache), recursive = TRUE, showWarnings = FALSE)
 dir.create(cfg$model_cache_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(cfg$output_dir, recursive = TRUE, showWarnings = FALSE)
 
-
-# ==============================================================================
 # 1. PACKAGES
-# ==============================================================================
 
 required_pkgs <- c(
   "curl",
@@ -202,11 +118,6 @@ install_if_missing <- function(pkgs) {
 
 install_if_missing(required_pkgs)
 
-
-# ==============================================================================
-# 2. BINANCE RAW 5m DATA
-# ==============================================================================
-
 interval_to_ms <- function(interval) {
   lookup <- c(
     "1m" = 60000,
@@ -224,7 +135,6 @@ interval_to_ms <- function(interval) {
   unname(lookup[[interval]])
 }
 
-
 date_to_ms <- function(x) {
   as.numeric(
     as.POSIXct(
@@ -233,7 +143,6 @@ date_to_ms <- function(x) {
     )
   ) * 1000
 }
-
 
 empty_klines <- function() {
   data.frame(
@@ -251,7 +160,6 @@ empty_klines <- function() {
     stringsAsFactors = FALSE
   )
 }
-
 
 standardize_klines <- function(x) {
   if (is.null(x) || length(x) == 0L) {
@@ -319,7 +227,6 @@ standardize_klines <- function(x) {
   rownames(out) <- NULL
   out
 }
-
 
 fetch_binance_rest <- function(
     symbol,
@@ -464,7 +371,6 @@ fetch_binance_rest <- function(
   out
 }
 
-
 load_binance_raw <- function(cfg) {
   requested_start <- cfg$start_date - 1L
   requested_end <- cfg$end_date
@@ -564,10 +470,7 @@ load_binance_raw <- function(cfg) {
   raw
 }
 
-
-# ==============================================================================
 # 3. DAILY REALIZED MEASURES
-# ==============================================================================
 
 build_daily_measures <- function(raw, cfg) {
   raw$datetime <- as.POSIXct(
@@ -649,8 +552,6 @@ build_daily_measures <- function(raw, cfg) {
 
       jump <- max(rv - bv, 0)
 
-      # Realized quarticity:
-      # RQ_t = (M/3) * sum r_i^4
       rq <- (m / 3) *
         sum(rr^4)
 
@@ -761,7 +662,6 @@ build_daily_measures <- function(raw, cfg) {
   out
 }
 
-
 raw <- load_binance_raw(cfg)
 
 message(
@@ -779,10 +679,7 @@ message(
   nrow(dat)
 )
 
-
-# ==============================================================================
 # 4. HELPERS
-# ==============================================================================
 
 qlike_loss <- function(actual, forecast, eps = 1e-12) {
   actual <- pmax(actual, eps)
@@ -791,7 +688,6 @@ qlike_loss <- function(actual, forecast, eps = 1e-12) {
   ratio <- actual / forecast
   ratio - log(ratio) - 1
 }
-
 
 future_average <- function(x, origin, h) {
   if (origin + h > length(x)) {
@@ -803,7 +699,6 @@ future_average <- function(x, origin, h) {
   )
 }
 
-
 roll_mean_at <- function(x, i, k) {
   if (i < k) {
     return(NA_real_)
@@ -813,7 +708,6 @@ roll_mean_at <- function(x, i, k) {
     x[(i - k + 1L):i]
   )
 }
-
 
 guard_har_forecast <- function(
     pred,
@@ -882,10 +776,7 @@ guard_har_forecast <- function(
   )
 }
 
-
-# ==============================================================================
 # 5. HAR-FAMILY TRAINING FRAMES
-# ==============================================================================
 
 build_direct_frame <- function(
     RV,
@@ -968,7 +859,6 @@ build_direct_frame <- function(
   do.call(rbind, rows)
 }
 
-
 current_direct_features <- function(
     RV,
     BV,
@@ -1013,7 +903,6 @@ current_direct_features <- function(
     qint_m = sqrt(rq_m) * rv_m
   )
 }
-
 
 fit_predict_lm <- function(
     df,
@@ -1074,7 +963,6 @@ fit_predict_lm <- function(
     guarded = g$guarded
   )
 }
-
 
 forecast_har_models <- function(
     RV,
@@ -1142,11 +1030,6 @@ forecast_har_models <- function(
     HARQ_F = harq_f
   )
 }
-
-
-# ==============================================================================
-# 6. GARCH(1,1)-t
-# ==============================================================================
 
 forecast_garch <- function(
     ret_pct,
@@ -1252,10 +1135,7 @@ forecast_garch <- function(
   )
 }
 
-
-# ==============================================================================
 # 7. REALIZED-GARCH
-# ==============================================================================
 
 forecast_realgarch <- function(
     ret_pct,
@@ -1287,8 +1167,6 @@ forecast_realgarch <- function(
     order.by = d
   )
 
-  # rugarch's realGARCH interface expects a realized volatility series,
-  # hence sqrt(RV) in the same percent units as returns.
   rvol_xts <- xts::xts(
     sqrt(rv),
     order.by = d
@@ -1394,8 +1272,6 @@ forecast_realgarch <- function(
     )
   }
 
-  # Fallback: conditional return variance if realized-measure forecast cannot be
-  # extracted on a particular rugarch version.
   sig <- tryCatch(
     as.numeric(
       rugarch::sigma(fc)
@@ -1430,10 +1306,7 @@ forecast_realgarch <- function(
   )
 }
 
-
-# ==============================================================================
 # 8. HEAVY-RM
-# ==============================================================================
 
 heavy_decode <- function(theta, mu, cfg) {
   rho <- cfg$heavy_rho_max *
@@ -1454,7 +1327,6 @@ heavy_decode <- function(theta, mu, cfg) {
     rho = rho
   )
 }
-
 
 heavy_filter <- function(
     RV,
@@ -1490,7 +1362,6 @@ heavy_filter <- function(
   m
 }
 
-
 heavy_objective <- function(
     theta,
     RV,
@@ -1512,7 +1383,6 @@ heavy_objective <- function(
     pars
   )
 
-  # One-step realized-measure QLIKE from t=2 onward.
   loss <- qlike_loss(
     RV[-1L],
     m[-1L],
@@ -1530,7 +1400,6 @@ heavy_objective <- function(
     val
   }
 }
-
 
 fit_forecast_heavy <- function(
     RV,
@@ -1555,7 +1424,6 @@ fit_forecast_heavy <- function(
     )
   }
 
-  # Initial rho ~0.8, alpha/rho ~0.5
   init <- c(
     stats::qlogis(
       0.8 / cfg$heavy_rho_max
@@ -1619,7 +1487,6 @@ fit_forecast_heavy <- function(
     cfg$forecast_floor
   )
 
-  # For k>=2, E_t[RV_{t+k-1}] is its HEAVY conditional mean.
   if (max_h >= 2L) {
     for (k in 2L:max_h) {
       daily_fc[k] <- pars["omega"] +
@@ -1646,10 +1513,7 @@ fit_forecast_heavy <- function(
   )
 }
 
-
-# ==============================================================================
 # 9. OOS ORIGINS
-# ==============================================================================
 
 max_h <- max(cfg$horizons)
 
@@ -1685,10 +1549,7 @@ message(
   ")"
 )
 
-
-# ==============================================================================
 # 10. WALK-FORWARD HORSE RACE
-# ==============================================================================
 
 forecast_rows <- list()
 failure_rows <- list()
@@ -1721,7 +1582,6 @@ for (oo in seq_along(oos_idx)) {
   train_ret <- dat$ret_pct[ii]
   train_dates <- dat$date[ii]
 
-  # GARCH and Realized-GARCH are fit once per origin for all horizons.
   garch <- tryCatch(
     forecast_garch(
       train_ret,
@@ -1995,10 +1855,7 @@ model_failures <- if (
   )
 }
 
-
-# ==============================================================================
 # 11. METRICS
-# ==============================================================================
 
 metric_one <- function(df) {
   ok <- is.finite(df$actual_rv) &
@@ -2064,7 +1921,6 @@ metric_one <- function(df) {
   )
 }
 
-
 groups <- split(
   forecasts,
   interaction(
@@ -2102,10 +1958,7 @@ metrics <- metrics[
   drop = FALSE
 ]
 
-
-# ==============================================================================
 # 12. DIEBOLD-MARIANO
-# ==============================================================================
 
 nw_long_run_variance <- function(
     x,
@@ -2148,7 +2001,6 @@ nw_long_run_variance <- function(
 
   lrv
 }
-
 
 paired_loss_diff <- function(
     forecasts,
@@ -2230,7 +2082,6 @@ paired_loss_diff <- function(
   )
 }
 
-
 dm_test_from_diff <- function(
     d,
     h
@@ -2285,10 +2136,7 @@ dm_test_from_diff <- function(
   )
 }
 
-
-# ==============================================================================
 # 13. MOVING-BLOCK BOOTSTRAP
-# ==============================================================================
 
 block_bootstrap_mean <- function(
     d,
@@ -2360,7 +2208,6 @@ block_bootstrap_mean <- function(
     na.rm = TRUE
   )
 
-  # Null-centered bootstrap p-value.
   d0 <- d - mean(d)
 
   set.seed(seed + 99991L)
@@ -2381,7 +2228,6 @@ block_bootstrap_mean <- function(
     p_value = p
   )
 }
-
 
 comparison_pairs <- list(
   c("HAR_J", "HAR_RV"),
@@ -2492,10 +2338,7 @@ bootstrap_tests <- if (
   data.frame()
 }
 
-
-# ==============================================================================
 # 14. STABILITY DIAGNOSTICS
-# ==============================================================================
 
 diag_groups <- split(
   forecasts,
@@ -2561,10 +2404,7 @@ stability <- do.call(
 
 rownames(stability) <- NULL
 
-
-# ==============================================================================
 # 15. PLOTS
-# ==============================================================================
 
 for (h in cfg$horizons) {
   pdat <- forecasts[
@@ -2638,7 +2478,6 @@ for (h in cfg$horizons) {
     dpi = 150
   )
 
-  # Cumulative QLIKE relative to HAR_RV.
   har <- pdat[
     pdat$model == "HAR_RV",
     c(
@@ -2762,10 +2601,7 @@ for (h in cfg$horizons) {
   }
 }
 
-
-# ==============================================================================
 # 16. SAVE OUTPUTS
-# ==============================================================================
 
 utils::write.csv(
   forecasts,
@@ -2851,7 +2687,6 @@ utils::write.csv(
   row.names = FALSE
 )
 
-
 config_lines <- c(
   paste0(
     "Run time: ",
@@ -2925,10 +2760,7 @@ writeLines(
   )
 )
 
-
-# ==============================================================================
 # 17. CONSOLE REPORT
-# ==============================================================================
 
 cat(
   "\n\n======================= OOS METRICS =======================\n"

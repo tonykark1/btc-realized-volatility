@@ -1,63 +1,12 @@
-# ==============================================================================
 # BTC REALIZED-VOLATILITY HORSE RACE — AESTHETIC VISUALIZATION SUITE
-# ==============================================================================
-#
-# Creates a publication-quality / LinkedIn-quality visual pack from the output
-# of btc_binance_realized_vol_horserace.R.
-#
-# EXPECTED INPUT FILES:
-#   metrics.csv
-#   forecasts.csv
-#   bootstrap_tests.csv
-#   dm_tests.csv
-#   daily_realized_measures.csv
-#   heavy_parameters.csv
-#
-# VISUAL SYSTEM:
-#   Realized-GARCH = blue
-#   HARQ           = blue-green
-#   HEAVY          = vermillion
-#   HAR-RV         = grey
-#   GARCH          = charcoal
-#
-#   Statistical improvement = blue
-#   Statistical deterioration = orange
-#   Inconclusive = grey
-#
-# The palette is designed to be color-blind safer and to distinguish
-# model identity from statistical direction.
-#
-# DEFAULT INPUT FOLDER:
-#   results/btc_rv_horserace
-#
-# OUTPUT:
-#   results/btc_rv_horserace/viz/
-#
-# FIGURES:
-#   00_research_cover.png
-#   01_qlike_leaderboard.png
-#   02_relative_qlike_heatmap.png
-#   03_cumulative_qlike_vs_har.png
-#   04_realgarch_vs_harq.png
-#   05_forecast_vs_realized.png
-#   06_bootstrap_forest.png
-#   07_regime_performance.png
-#   08_heavy_parameter_evolution.png
-#   09_research_dashboard.png
-#
-# ==============================================================================
 
-
-# ==============================================================================
 # 0. CONFIG
-# ==============================================================================
 
 DATA_DIR <- "results/btc_rv_horserace"
 ZIP_FILE <- "btc_rv_horserace.zip"
 
 OUT_DIR <- file.path(DATA_DIR, "viz")
 
-# Restrict forecast plots to the models that communicate the story best.
 FOCUS_MODELS <- c(
   "REALGARCH",
   "HARQ",
@@ -66,15 +15,12 @@ FOCUS_MODELS <- c(
   "GARCH_11"
 )
 
-# Rolling smoother for the noisy forecast-vs-realized chart.
 ROLLING_DAYS <- 14L
 
-# PNG settings.
 FIG_WIDTH <- 13
 FIG_HEIGHT <- 7.5
 FIG_DPI <- 300
 
-# A clean editorial-finance palette.
 COLORS <- c(
   "REALGARCH" = "#0072B2",  # strong blue
   "HARQ" = "#009E73",       # blue-green
@@ -91,10 +37,6 @@ GRID <- "#DDD9D0"
 PAPER <- "#F8F7F3"
 WHITE <- "#FFFFFF"
 
-# Statistical direction palette:
-# blue = evidence model A is better
-# orange = evidence model A is worse
-# grey = inconclusive
 POS <- "#0072B2"
 NEG <- "#D55E00"
 NEUTRAL <- "#9A948A"
@@ -102,10 +44,7 @@ ACCENT <- "#0072B2"
 
 set.seed(12345)
 
-
-# ==============================================================================
 # 1. PACKAGES
-# ==============================================================================
 
 required_pkgs <- c(
   "ggplot2",
@@ -159,10 +98,7 @@ install_if_missing <- function(pkgs) {
 
 install_if_missing(required_pkgs)
 
-
-# ==============================================================================
 # 2. LOCATE / LOAD DATA
-# ==============================================================================
 
 required_files <- c(
   "metrics.csv",
@@ -311,10 +247,7 @@ heavy$origin_date <- as.Date(
   heavy$origin_date
 )
 
-
-# ==============================================================================
 # 3. LABELS / THEME
-# ==============================================================================
 
 model_label <- function(x) {
   dplyr::recode(
@@ -426,10 +359,7 @@ save_plot <- function(
   )
 }
 
-
-# ==============================================================================
 # 4. DERIVED DATA
-# ==============================================================================
 
 metrics <- metrics |>
   dplyr::mutate(
@@ -473,7 +403,6 @@ metric_rel <- metrics |>
       har_qlike
   )
 
-# Best model at each horizon.
 winners <- metrics |>
   dplyr::group_by(
     horizon
@@ -485,7 +414,6 @@ winners <- metrics |>
   ) |>
   dplyr::ungroup()
 
-# HARQ improvement against HAR-RV.
 harq_improvement <- metric_rel |>
   dplyr::filter(
     model == "HARQ"
@@ -493,11 +421,6 @@ harq_improvement <- metric_rel |>
   dplyr::arrange(
     horizon
   )
-
-
-# ==============================================================================
-# 5. 00 — RESEARCH COVER
-# ==============================================================================
 
 cover_data <- winners |>
   dplyr::arrange(
@@ -657,11 +580,6 @@ save_plot(
   height = 8
 )
 
-
-# ==============================================================================
-# 6. 01 — QLIKE LEADERBOARD
-# ==============================================================================
-
 leaderboard <- metrics |>
   dplyr::group_by(
     horizon_pretty
@@ -764,11 +682,6 @@ save_plot(
   width = 15,
   height = 7.5
 )
-
-
-# ==============================================================================
-# 7. 02 — RELATIVE QLIKE HEATMAP
-# ==============================================================================
 
 heat <- metric_rel |>
   dplyr::mutate(
@@ -884,10 +797,7 @@ save_plot(
   height = 7.5
 )
 
-
-# ==============================================================================
 # 8. DAILY QLIKE HELPERS
-# ==============================================================================
 
 qlike <- function(
     actual,
@@ -929,11 +839,6 @@ daily_loss <- forecasts |>
       forecast_rv
     )
   )
-
-
-# ==============================================================================
-# 9. 03 — CUMULATIVE QLIKE VS HAR-RV
-# ==============================================================================
 
 har_daily <- daily_loss |>
   dplyr::filter(
@@ -1077,11 +982,6 @@ save_plot(
   height = 10
 )
 
-
-# ==============================================================================
-# 10. 04 — REALIZED-GARCH VS HARQ HEAD-TO-HEAD
-# ==============================================================================
-
 head_a <- daily_loss |>
   dplyr::filter(
     model == "REALGARCH"
@@ -1206,11 +1106,6 @@ save_plot(
   height = 6.5
 )
 
-
-# ==============================================================================
-# 11. 05 — FORECAST VS REALIZED
-# ==============================================================================
-
 forecast_focus <- forecasts |>
   dplyr::filter(
     horizon == 1,
@@ -1326,11 +1221,6 @@ save_plot(
   height = 7
 )
 
-
-# ==============================================================================
-# 12. 06 — BOOTSTRAP FOREST PLOT
-# ==============================================================================
-
 forest_keep <- bootstrap |>
   dplyr::filter(
     loss == "QLIKE",
@@ -1443,11 +1333,6 @@ save_plot(
   width = 16,
   height = 8.5
 )
-
-
-# ==============================================================================
-# 13. 07 — PERFORMANCE BY VOLATILITY REGIME
-# ==============================================================================
 
 regime_base <- daily_loss |>
   dplyr::filter(
@@ -1593,11 +1478,6 @@ save_plot(
   height = 7
 )
 
-
-# ==============================================================================
-# 14. 08 — HEAVY PARAMETER EVOLUTION
-# ==============================================================================
-
 heavy_long <- heavy |>
   dplyr::select(
     origin_date,
@@ -1674,13 +1554,6 @@ save_plot(
   width = 13,
   height = 6.5
 )
-
-
-# ==============================================================================
-# 15. 09 — RESEARCH DASHBOARD
-# ==============================================================================
-
-# Compact versions of leaderboard / head-to-head / forest for one-page summary.
 
 leader_dash <- metrics |>
   dplyr::filter(
@@ -1868,10 +1741,7 @@ save_plot(
   height = 17
 )
 
-
-# ==============================================================================
 # 16. EXPORT A SMALL VIZ SUMMARY TABLE
-# ==============================================================================
 
 viz_summary <- metric_rel |>
   dplyr::select(
@@ -1895,10 +1765,7 @@ readr::write_csv(
   )
 )
 
-
-# ==============================================================================
 # 17. CONSOLE
-# ==============================================================================
 
 cat(
   "\n============================================================\n"

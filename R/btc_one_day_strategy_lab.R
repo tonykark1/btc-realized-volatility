@@ -1,16 +1,5 @@
 # BTC one-day volatility forecast strategy lab
-# Uses the 1-day HARQ + Realized-GARCH RV forecasts from this project.
 # All signals at t are formed from information available through t and applied to t->t+1 BTC returns.
-#
-# Strategies:
-# BUY_HOLD, TREND, EWMA_VOL_TARGET, MODEL_VOL_TARGET, RAW_FORECAST_Z,
-# MODEL_MINUS_EWMA_Z, VOL_CHANGE_Z, MODEL_DISAGREEMENT,
-# ERROR_ADJUSTED_VOL_TARGET, COMPRESSION_BREAKOUT, VOL_STATE_MACHINE,
-# TREND_EWMA, TREND_MODEL_VOL, TREND_X_VOL_Z, TREND_X_VOL_Z_X_CHANGE.
-#
-# Optional VRP diagnostic:
-# create results/btc_options_iv.csv with columns date, iv_ann (decimal annualized IV).
-# This creates a model-vs-IV signal only; it does not fake an options P&L without option returns/bid-ask data.
 
 cfg <- list(
   forecast_file="results/btc_rv_horserace/forecasts.csv",
@@ -167,8 +156,6 @@ run_strategy <- function(target_w, risky_r, cost_bps=10) {
              gross_return=gross, net_return=net)
 }
 
-# ------------------------- Forecasts -------------------------
-
 if(!file.exists(cfg$forecast_file)) stop("Run btc_binance_realized_vol_horserace.R first.")
 fc <- readr::read_csv(cfg$forecast_file, show_col_types=FALSE)
 req <- c("origin_date","horizon","model","forecast_rv")
@@ -187,8 +174,6 @@ model_fc <- dplyr::inner_join(rg,hq,by="origin_date") |>
              cfg$ensemble_harq_weight*rv_harq
   )
 
-# ------------------------- Realized RV -------------------------
-
 if(file.exists(cfg$realized_file)) {
   rv <- readr::read_csv(cfg$realized_file, show_col_types=FALSE)
   rv$date <- as.Date(rv$date)
@@ -196,8 +181,6 @@ if(file.exists(cfg$realized_file)) {
 } else {
   rv <- NULL
 }
-
-# ------------------------- BTC daily close -------------------------
 
 if(!file.exists(cfg$price_cache)) stop("Missing ",cfg$price_cache)
 x <- as.data.frame(readRDS(cfg$price_cache))
@@ -285,13 +268,10 @@ dat$model_minus_ewma_z <- clip(lagged_z(dat$model_minus_ewma,cfg$z_window,cfg$z_
 dat$model_vol_change_z <- clip(lagged_z(dat$model_vol_change,cfg$z_window,cfg$z_min_obs),-cfg$z_clip,cfg$z_clip)
 dat$disagreement_z <- clip(lagged_z(dat$disagreement,cfg$z_window,cfg$z_min_obs),-cfg$z_clip,cfg$z_clip)
 
-# Forecast error known at t = RV_t - forecast formed at t-1 for t.
 dat$forecast_error_current <- dat$rv_t - dplyr::lag(dat$rv_model)
 dat$error_mean <- lagged_mean(dat$forecast_error_current,cfg$error_window,3L)
 dat$rv_model_adj <- pmax(dat$rv_model + cfg$error_lambda*dat$error_mean,1e-10)
 dat$error_adj_vol_ann <- sqrt(dat$rv_model_adj)/100*sqrt(cfg$annualization)
-
-# ------------------------- Strategy weights -------------------------
 
 dat$w_BUY_HOLD <- 1
 dat$w_TREND <- dat$trend_flag
@@ -303,7 +283,6 @@ dat$w_VOL_CHANGE_Z <- clip(cfg$z_base_weight-cfg$z_delta_k*dat$model_vol_change_
 dat$w_MODEL_DISAGREEMENT <- clip(cfg$z_base_weight-cfg$disagreement_k*pmax(dat$disagreement_z,0),cfg$min_weight,cfg$max_weight)
 dat$w_ERROR_ADJUSTED_VOL_TARGET <- clip(cfg$target_vol/dat$error_adj_vol_ann,cfg$min_weight,cfg$max_weight)
 
-# Stateful compression -> upside breakout.
 pos <- 0
 wb <- rep(0,nrow(dat))
 for(i in seq_len(nrow(dat))) {
@@ -363,14 +342,11 @@ strategy_map <- c(
   TREND_X_VOL_Z_X_CHANGE="w_TREND_X_VOL_Z_X_CHANGE"
 )
 
-# Same OOS dates for all strategies.
 ok <- is.finite(dat$model_vol_z) & is.finite(dat$model_minus_ewma_z) &
       is.finite(dat$model_vol_change_z) & is.finite(dat$disagreement_z) &
       is.finite(dat$btc_return) & is.finite(dat$model_vol_ann) & is.finite(dat$ewma_vol_ann)
 bt <- dat[ok,]
 if(nrow(bt)<100) stop("Common strategy sample too small.")
-
-# ------------------------- Main backtest -------------------------
 
 daily_out <- list()
 metric_out <- list()
@@ -402,8 +378,6 @@ strategy_metrics_main <- dplyr::bind_rows(metric_out) |>
   dplyr::select(strategy,dplyr::everything()) |>
   dplyr::arrange(dplyr::desc(Sharpe))
 
-# ------------------------- Cost sensitivity -------------------------
-
 cost_out <- list()
 k <- 1L
 for(cst in cfg$cost_grid_bps) {
@@ -419,8 +393,6 @@ for(cst in cfg$cost_grid_bps) {
 cost_sensitivity <- dplyr::bind_rows(cost_out) |>
   dplyr::select(strategy,cost_bps,dplyr::everything())
 
-# ------------------------- Common-vol diagnostic -------------------------
-
 cv_out <- list()
 for(s in unique(strategy_daily$strategy)) {
   d <- dplyr::filter(strategy_daily,strategy==s)
@@ -434,8 +406,6 @@ for(s in unique(strategy_daily$strategy)) {
 strategy_metrics_common_vol <- dplyr::bind_rows(cv_out) |>
   dplyr::select(strategy,common_vol_scale,dplyr::everything()) |>
   dplyr::arrange(dplyr::desc(Sharpe))
-
-# ------------------------- Diagnostics -------------------------
 
 signal_diagnostics <- data.frame(
   n=nrow(bt),
@@ -462,7 +432,6 @@ regime_summary <- bt |> dplyr::filter(!is.na(vol_state)) |>
     .groups="drop"
   )
 
-# Optional VRP signal only.
 if(file.exists(cfg$options_iv_file)) {
   iv <- readr::read_csv(cfg$options_iv_file,show_col_types=FALSE)
   if(all(c("date","iv_ann") %in% names(iv))) {
@@ -480,16 +449,12 @@ if(file.exists(cfg$options_iv_file)) {
   }
 }
 
-# ------------------------- Save tables -------------------------
-
 readr::write_csv(strategy_daily,file.path(cfg$output_dir,"strategy_daily.csv"))
 readr::write_csv(strategy_metrics_main,file.path(cfg$output_dir,"strategy_metrics_main.csv"))
 readr::write_csv(strategy_metrics_common_vol,file.path(cfg$output_dir,"strategy_metrics_common_vol.csv"))
 readr::write_csv(cost_sensitivity,file.path(cfg$output_dir,"cost_sensitivity.csv"))
 readr::write_csv(signal_diagnostics,file.path(cfg$output_dir,"signal_diagnostics.csv"))
 readr::write_csv(regime_summary,file.path(cfg$output_dir,"regime_summary.csv"))
-
-# ------------------------- Plots -------------------------
 
 BG <- "#F8F7F3"
 theme_lab <- function() ggplot2::theme_minimal(base_size=12) +
