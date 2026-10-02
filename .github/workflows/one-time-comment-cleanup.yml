@@ -1,0 +1,92 @@
+name: One-time comment cleanup
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-comment-cleanup.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trim nonessential full-line comments
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          files = [
+              Path('R/btc_binance_realized_vol_horserace.R'),
+              Path('R/btc_one_day_strategy_lab.R'),
+              Path('R/btc_rv_horserace_visuals.R'),
+          ]
+
+          keep_keywords = (
+              'leak', 'purge', 'information through', 't+1', 't -> t+1',
+              'percent-squared', 'variance units', 'microseconds',
+              'normalize internal timestamps', 'range guard', 'realizedfor',
+              'passively drifted', 'common-volatility', 'ex-post',
+              'financing', 'cash earns', 'look-ahead', 'lookahead'
+          )
+
+          section_re = re.compile(r'^#\s*(?:\d+(?:\.\d+)*\.?\s+)?[A-Z][A-Z0-9 /&+_.-]{3,}$')
+          separator_re = re.compile(r'^#\s*[-=]{4,}\s*$')
+
+          def keep_comment(line: str) -> bool:
+              s = line.strip()
+              if separator_re.match(s):
+                  return False
+              body = s.lstrip('#').strip()
+              low = body.lower()
+              if not body:
+                  return False
+              if section_re.match(s):
+                  return True
+              if any(k in low for k in keep_keywords):
+                  return True
+              if low.startswith('btc ') and len(body) < 100:
+                  return True
+              if low.startswith('ewma rv benchmark'):
+                  return True
+              return False
+
+          for path in files:
+              lines = path.read_text(encoding='utf-8').splitlines()
+              before = sum(1 for x in lines if x.lstrip().startswith('#'))
+              out = []
+              for line in lines:
+                  if line.lstrip().startswith('#') and not keep_comment(line):
+                      continue
+                  if line.strip() == '' and out and out[-1].strip() == '':
+                      continue
+                  out.append(line.rstrip())
+              while out and out[-1].strip() == '':
+                  out.pop()
+              path.write_text('\n'.join(out) + '\n', encoding='utf-8')
+              after = sum(1 for x in out if x.lstrip().startswith('#'))
+              print(f'{path}: comments {before} -> {after}; lines {len(lines)} -> {len(out)}')
+          PY
+
+      - name: Check diff
+        run: |
+          git diff --check
+          git diff --stat
+
+      - name: Commit cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add R/btc_binance_realized_vol_horserace.R R/btc_one_day_strategy_lab.R R/btc_rv_horserace_visuals.R
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Trim nonessential code comments"
+            git push
+          fi
