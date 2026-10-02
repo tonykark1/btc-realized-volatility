@@ -22,13 +22,13 @@ FIG_HEIGHT <- 7.5
 FIG_DPI <- 300
 
 COLORS <- c(
-  "REALGARCH" = "#0072B2",  # strong blue
-  "HARQ" = "#009E73",       # blue-green
-  "HARQ_F" = "#56B4E9",     # light blue
-  "HEAVY_RM" = "#D55E00",   # vermillion
-  "HAR_J" = "#CC79A7",      # muted purple
-  "HAR_RV" = "#8A8A8A",     # neutral benchmark grey
-  "GARCH_11" = "#222222"    # charcoal benchmark
+  "REALGARCH" = "#0072B2",
+  "HARQ" = "#009E73",
+  "HARQ_F" = "#56B4E9",
+  "HEAVY_RM" = "#D55E00",
+  "HAR_J" = "#CC79A7",
+  "HAR_RV" = "#8A8A8A",
+  "GARCH_11" = "#222222"
 )
 
 INK <- "#182026"

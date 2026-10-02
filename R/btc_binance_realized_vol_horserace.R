@@ -1,6 +1,4 @@
 # BTC REALIZED-VOLATILITY MODEL HORSE RACE — BINANCE 5m
-# PURPOSE
-#   y_{t,h} = mean(RV_{t+1}, ..., RV_{t+h})
 #   1. GARCH_11
 #   2. HAR_RV
 #   3. HAR_J
@@ -8,8 +6,6 @@
 #   5. HARQ_F
 #   6. REALGARCH
 #   7. HEAVY_RM
-#   squaring it back to variance units.
-# ANTI-LEAKAGE:
 
 # 0. CONFIG
 
@@ -46,7 +42,6 @@ cfg <- list(
 
   har_range_guard = TRUE,
 
-  # HEAVY
   heavy_min_rows = 250L,
   heavy_rho_max = 0.999,
 
@@ -188,7 +183,6 @@ standardize_klines <- function(x) {
   )
 
   # Public archive data can use microseconds for recent data.
-  # Normalize internal timestamps to milliseconds.
   open_ms <- ifelse(
     abs(open_raw) >= 1e14,
     open_raw / 1000,
@@ -1477,7 +1471,6 @@ fit_forecast_heavy <- function(
 
   daily_fc <- numeric(max_h)
 
-  # t+1 uses observed RV_t.
   daily_fc[1L] <- pars["omega"] +
     pars["alpha"] * tail(RV, 1L) +
     pars["beta"] * tail(m, 1L)
