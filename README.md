@@ -1,10 +1,10 @@
 # Bitcoin Realized Volatility
 
-Research-grade Bitcoin realized-volatility forecasting using Binance 5-minute data, HARQ, Realized-GARCH and HEAVY, with leakage-safe walk-forward evaluation and an explicit economic-value test.
+Bitcoin realized-volatility forecasting using Binance 5-minute data, HARQ, Realized-GARCH and HEAVY, with rolling walk-forward evaluation and an explicit economic-value test.
 
 **Status: finished / frozen at v1.0.**
 
-[Read the research note](report/research_note.md) · [Report audit trail](report/README.md)
+[Research note](report/research_note.md) · [Audit trail](report/README.md) · [Full production code](../../tree/research-archive-v1)
 
 ## Main result
 
@@ -28,7 +28,7 @@ These are pairwise, loss-specific tests, not a global multiple-testing-adjusted 
 
 ## Economic-value test
 
-The final strategy lab uses 562 daily returns and charges 10 bp per unit turnover. The EWMA timing bug found during red-team review was corrected before publication; no strategy parameters were retuned afterward.
+The strategy lab uses 562 daily returns and 10 bp per unit turnover. The corrected EWMA benchmark incorporates observed `RV_t` when forming the `t+1` forecast; no strategy parameters were retuned afterward.
 
 | Strategy | Sharpe | Annual turnover |
 |---|---:|---:|
@@ -43,43 +43,37 @@ At 25 bp costs, plain trend beats the model-vol-z overlay.
 
 > **Better realized-volatility forecasts do not automatically produce better spot-BTC trading strategies.**
 
-## Public code
+## Audit-first public code
 
-`main` intentionally keeps only the core implementation:
+`main` is deliberately small enough to inspect. It contains the mathematical core, not every downloader, cache helper, experiment and plotting routine used during development.
 
 ```text
 R/
-  btc_binance_realized_vol_horserace.R
-  btc_one_day_strategy_lab.R
-  btc_rv_horserace_visuals.R
+  01_realized_measures.R   RV / RQ / BV / jump construction
+  02_forecast_core.R       HAR-RV, HARQ, HEAVY-RM, walk-forward logic
+  03_inference.R           QLIKE, DM test, moving-block bootstrap
+  04_strategy_core.R       corrected EWMA and core economic-value test
+  05_audit_results.R       one-command check of published headline results
 ```
 
-The exploratory CEEMDAN scripts and older standalone targeting script are preserved on the `research-archive-v1` branch rather than cluttering the portfolio-facing branch.
+Run:
+
+```r
+source("R/05_audit_results.R")
+```
+
+to verify the committed headline tables. The full pre-refactor implementation, including Binance ingestion, Realized-GARCH/GARCH package plumbing, all exploratory models and the full visualization suite, is preserved on [`research-archive-v1`](../../tree/research-archive-v1).
 
 ## Repository structure
 
 ```text
-R/          core research code
-docs/       findings and strategy notes
-results/    compact saved result tables
-report/     public research note, references and audit evidence
+R/          compact audit implementation
+results/    saved result tables from the frozen full run
+report/     public research note, references and validation evidence
+docs/       supporting findings and strategy notes
 ```
 
-Raw Binance cache files and heavyweight generated panels are intentionally excluded.
-
-## Reproducibility notes
-
-- Forecasts are rolling walk-forward and use only information available at each origin.
-- Direct multi-day HAR-family targets are purged.
-- Strategy signals at day `t` are applied to the `t -> t+1` return.
-- Corrected EWMA at origin `t` incorporates observed `RV_t` when forming the `t+1` forecast.
-- Turnover is measured against the passively drifted risky weight.
-- Common-volatility results are ex-post diagnostics, not implementable live scaling rules.
-- Unused cash earns zero and no financing charge is modeled for exposure above 1x.
-
-## References
-
-See [`report/references.md`](report/references.md) for the HAR-RV, HARQ, Realized-GARCH, HEAVY and QLIKE references.
+Raw Binance caches and heavyweight per-origin panels are intentionally excluded from `main`.
 
 ## Final takeaway
 
