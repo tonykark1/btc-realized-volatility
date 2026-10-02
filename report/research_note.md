@@ -93,11 +93,11 @@ The public repository keeps the compact evidence needed to check the published c
 - `source_data/strategy_metrics_main.csv`
 - `source_data/strategy_metrics_common_vol.csv`
 - `source_data/cost_sensitivity.csv`
-- `research_code/` snapshots of the forecasting and corrected strategy scripts
+- `../R/01_realized_measures.R` through `../R/05_audit_results.R`, a compact audit implementation of the core research logic
 - `tests/test_ewma_timing.R` guarding the EWMA timing correction
 - `sessionInfo.txt` for the corrected strategy verification environment
 
-The original forecasting run did not preserve a dependency lockfile, so the historical `rugarch` environment is not reconstructed after the fact. Heavy per-origin forecast panels, the full daily strategy path and raw five-minute Binance cache remain outside the public portfolio repository.
+The full production implementation is preserved on the `research-archive-v1` branch. The original forecasting run did not preserve a dependency lockfile, so the historical `rugarch` environment is not reconstructed after the fact. Heavy per-origin forecast panels, the full daily strategy path and raw five-minute Binance cache remain outside portfolio-facing `main`.
 
 ## Final takeaway
 
