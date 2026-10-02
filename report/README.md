@@ -11,9 +11,9 @@ This folder contains the public note and the compact evidence needed to audit it
 
 ## Audit trail
 
-`source_data/` contains the compact forecast metrics, pairwise DM/bootstrap output, corrected strategy metrics and transaction-cost sensitivity used by the note. `tests/test_ewma_timing.R` guards the EWMA timing fix against the production script in the root `R/` directory.
+`source_data/` contains the forecast metrics, pairwise DM/bootstrap output, corrected strategy metrics and transaction-cost sensitivity used by the note. The root `R/` directory contains a compact audit implementation: realized-measure construction, HAR/HARQ/HEAVY core logic, inference, the corrected strategy mechanics and a one-command result check. `tests/test_ewma_timing.R` guards the EWMA correction.
 
-The heavier per-origin forecast panel, full daily strategy path, exploratory CEEMDAN code and older standalone targeting code are not duplicated on `main`. The full pre-cleanup research state is preserved on the `research-archive-v1` branch.
+The full production implementation is preserved on the `research-archive-v1` branch. It includes the Binance downloader/cache plumbing, Realized-GARCH/GARCH package integration, exploratory models and the full visualization suite. Those are intentionally not duplicated on portfolio-facing `main`.
 
 ## Correction and scope
 
