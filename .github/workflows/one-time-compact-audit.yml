@@ -1,0 +1,25 @@
+name: One-time compact code audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-compact-audit.yml
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+      - name: Parse compact R modules
+        run: Rscript -e 'files <- list.files("R", pattern="[.]R$", full.names=TRUE); invisible(lapply(files, parse)); cat("PARSE PASS\n")'
+      - name: Test EWMA timing
+        run: Rscript report/tests/test_ewma_timing.R
+      - name: Audit published results
+        run: Rscript R/05_audit_results.R
+      - name: Count public R lines
+        run: wc -l R/*.R
