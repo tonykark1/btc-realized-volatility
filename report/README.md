@@ -1,22 +1,23 @@
 # Public research-note bundle
 
-This folder contains the public research note for the finished BTC realized-volatility project. The forecasting experiment is frozen; the strategy section incorporates the corrected EWMA timing audit.
+This folder contains the public note and the compact evidence needed to audit its headline claims.
 
 ## Read or share
 
 - [Research note](research_note.md)
-- [LinkedIn post](linkedin_post.md) and [eight-slide carousel text](linkedin_carousel.md)
+- [LinkedIn post](linkedin_post.md)
+- [Eight-slide carousel text](linkedin_carousel.md)
 - [Methodological references](references.md)
 
-## Audit trail in GitHub
+## Audit trail
 
-`source_data/` contains the compact evidence used in the public note: forecast metrics, original pairwise DM/bootstrap output, corrected strategy metrics, common-vol diagnostics and the full transaction-cost grid. `research_code/` snapshots the forecasting and corrected strategy scripts, and `tests/test_ewma_timing.R` guards the timing fix.
+`source_data/` contains the compact forecast metrics, pairwise DM/bootstrap output, corrected strategy metrics and transaction-cost sensitivity used by the note. `tests/test_ewma_timing.R` guards the EWMA timing fix against the production script in the root `R/` directory.
 
-The heavier per-origin forecast panel, full daily strategy path, rendered PDF/HTML publication bundle and raw five-minute Binance cache remain in the archived local audit bundle rather than being duplicated in this portfolio repository.
+The heavier per-origin forecast panel, full daily strategy path, exploratory CEEMDAN code and older standalone targeting code are not duplicated on `main`. The full pre-cleanup research state is preserved on the `research-archive-v1` branch.
 
 ## Correction and scope
 
-The EWMA benchmark now uses observed `RV_t` when forming the forecast for `t+1`. No strategy parameter was retuned after the correction. At 10 bp per unit turnover, corrected Sharpe ratios include `-0.03696` for EWMA vol targeting and `0.74889` for trend + EWMA; the model-vol-z overlay's small apparent edge over plain trend reverses by 25 bp costs.
+The EWMA benchmark uses observed `RV_t` when forming the forecast for `t+1`. No strategy parameter was retuned after the correction. At 10 bp per unit turnover, corrected Sharpe ratios include `-0.03696` for EWMA vol targeting and `0.74889` for trend + EWMA; the model-vol-z overlay's small apparent edge over plain trend reverses by 25 bp costs.
 
 Forecast results are rolling walk-forward OOS errors, not an untouched preregistered holdout. Pairwise DM/bootstrap tests are nominal, pairwise and loss-specific. Realized-GARCH has the lowest raw QLIKE; the note does not claim statistical dominance over HARQ. The economic application reuses the same repeatedly examined market episode and is not a confirmatory alpha test.
 
